@@ -1,1 +1,469 @@
-# exam_portals_test_1
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multilingual Interactive Exam Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2b5876;
+            --secondary: #4e4376;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --review: #9c27b0; 
+            --current: #17a2b8; 
+            --bg: #eef2f3;
+            --card-bg: #ffffff;
+            --text: #333333;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { background-color: var(--card-bg); max-width: 1100px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1, h2, h3 { text-align: center; color: var(--primary); }
+        
+        .btn { padding: 12px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s; margin: 5px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn-start { background-color: var(--success); color: white; }
+        .btn-close { background-color: var(--danger); color: white; }
+        .btn-primary { background: linear-gradient(to right, var(--primary), var(--secondary)); color: white; }
+        .btn-review { background-color: var(--review); color: white; }
+        .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        
+        .screen { display: none; }
+        .active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary); }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .match-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .match-table th, .match-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .match-table th { background-color: #f4f7f6; }
+
+        .exam-layout { display: flex; gap: 30px; margin-top: 20px; }
+        .left-panel { flex: 7; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .right-panel { flex: 3; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; height: fit-content;}
+        
+        .timer-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #eee; font-size: 18px; font-weight: bold; }
+        .timer-text { color: var(--danger); }
+        
+        /* Language Selector Toolbar */
+        .toolbar { background: #eef2f3; padding: 10px; border-radius: 6px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; border: 1px solid #ccc;}
+        .lang-select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #999; font-weight: bold;}
+        
+        .question-area { min-height: 400px; font-size: 18px; line-height: 1.6; }
+        .options label { display: block; background: #fff; padding: 15px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .options label:hover { background: #eef2f3; }
+        .options input { margin-right: 15px; transform: scale(1.3); }
+        
+        .controls { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .bottom-left-submit { position: absolute; bottom: -60px; left: 0; }
+
+        .palette-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .palette-btn { padding: 12px 0; font-size: 16px; font-weight: bold; border: 1px solid #ccc; border-radius: 5px; background: white; cursor: pointer; text-align: center; }
+        .status-unvisited { background: white; color: black; }
+        .status-visited { background: var(--danger); color: white; border-color: var(--danger); }
+        .status-answered { background: var(--success); color: white; border-color: var(--success); }
+        .status-review { background: var(--review); color: white; border-color: var(--review); }
+        .status-current { background: var(--current); color: white; border-color: var(--current); box-shadow: 0 0 8px rgba(23,162,184,0.6); }
+
+        .preview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
+        .preview-item { padding: 15px; text-align: center; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+
+        .loader-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; }
+        .spinner { border: 8px solid #f3f3f3; border-top: 8px solid var(--primary); border-radius: 50%; width: 70px; height: 70px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .dashboard-layout { display: flex; gap: 30px; margin-top: 20px; flex-wrap: wrap;}
+        .chart-container { flex: 1; min-width: 300px; max-width: 350px; margin: 0 auto; }
+        .score-details { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; font-size: 18px; }
+        .score-box { padding: 12px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
+        .result-item { margin-top: 15px; padding: 15px; border-radius: 8px; background: #fafafa; border: 1px solid #ddd;}
+        
+        .action-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- 1. MAIN HOME PAGE (DASHBOARD) -->
+    <div id="home-screen" class="screen active">
+        <h1>Welcome to Examination Portal</h1>
+        <form id="exam-config-form" onsubmit="event.preventDefault(); goToInstructions();">
+            <div class="setup-grid">
+                <div class="form-group">
+                    <label>Select Class</label>
+                    <select class="form-control" id="class-select" required>
+                        <option value="">-- Choose Class --</option>
+                        <option value="9">Class 9th</option>
+                        <option value="10">Class 10th</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Subject</label>
+                    <select class="form-control" id="subject-select" required>
+                        <option value="">-- Choose Subject --</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Mathematics">Mathematics</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chapter / Topic Name</label>
+                    <input type="text" class="form-control" id="chapter-input" value="The Fundamental Unit of Life" required>
+                </div>
+                <div class="form-group">
+                    <label>Exam Difficulty (Medium)</label>
+                    <select class="form-control" id="difficulty-select" required>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn btn-primary" style="font-size: 20px; padding: 15px 40px;">Proceed to Exam Setup →</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 2. INSTRUCTION SCREEN -->
+    <div id="instruction-screen" class="screen">
+        <h1 id="display-subject">Subject</h1>
+        <h2 id="display-chapter">Chapter</h2>
+        
+        <div style="background: #f9f9f9; padding: 25px; border-radius: 8px; border: 1px solid #ddd; margin: 20px 0;">
+            <h3>Examination Details & Rules</h3>
+            <ul style="font-size: 18px; line-height: 1.8;">
+                <li><strong>Class:</strong> <span id="display-class"></span></li>
+                <li><strong>Difficulty:</strong> <span id="display-diff"></span></li>
+                <li><strong>Total Questions:</strong> 20 (A&R, Matching, Cause/Effect)</li>
+                <li><strong>Total Time:</strong> 25 Minutes</li>
+                <li><strong>Language:</strong> English, Hindi, and Odia available during exam</li>
+                <li style="color: red; font-weight: bold;">WARNING: Do not refresh the page during the exam.</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn btn-start" onclick="startExam()">Start Exam</button>
+            <button class="btn btn-close" onclick="goHome()">Not Now</button>
+        </div>
+    </div>
+
+    <!-- 3. EXAM SCREEN -->
+    <div id="exam-screen" class="screen">
+        <div class="timer-bar">
+            <span id="exam-title-bar">Examination</span>
+            <span class="timer-text">Time Left: <span id="time-display">25:00</span></span>
+        </div>
+        
+        <div class="exam-layout">
+            <div class="left-panel">
+                <div class="toolbar">
+                    <label for="lang-select" style="margin-right: 10px; font-weight: bold;">Language / ଭାଷା / भाषा :</label>
+                    <select id="lang-select" class="lang-select" onchange="changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                    </select>
+                </div>
+                
+                <div class="question-area" id="question-area"></div>
+                
+                <!-- Notice the submit button is positioned bottom-left relative to left-panel -->
+                <button class="btn btn-start bottom-left-submit" id="btn-submit-exam" onclick="goToPreview()" style="display:none;">Submit Exam</button>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="btn-prev" onclick="changeQuestion(-1)">← Previous</button>
+                    <button class="btn btn-review" onclick="markForReview()">Hold / Review</button>
+                    <button class="btn btn-primary" id="btn-next" onclick="changeQuestion(1)">Next →</button>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <h3 style="margin-top: 0;">Question Palette</h3>
+                <div class="palette-grid" id="palette-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. PREVIEW SCREEN -->
+    <div id="preview-screen" class="screen">
+        <h2>Exam Summary</h2>
+        <div class="preview-grid" id="preview-grid"></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <button class="btn btn-outline" onclick="backToExam()">← Recheck</button>
+            <button class="btn btn-start" onclick="processFinalSubmit()">Final Submit →</button>
+        </div>
+    </div>
+
+    <!-- 5. LOADER SCREEN -->
+    <div id="loader-screen" class="screen">
+        <div class="loader-container">
+            <div class="spinner"></div>
+            <h2>Analyzing Results...</h2>
+        </div>
+    </div>
+
+    <!-- 6. RESULT DASHBOARD -->
+    <div id="result-screen" class="screen">
+        <h1>Final Analysis Dashboard</h1>
+        <div class="dashboard-layout">
+            <div class="chart-container"><canvas id="resultChart"></canvas></div>
+            <div class="score-details" id="score-details"></div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="reExam()">↻ Re-Examination</button>
+            <button class="btn btn-start" onclick="goHome()">+ New Examination</button>
+            <button class="btn btn-outline" onclick="goHome()">🏠 Main Home Page</button>
+        </div>
+        <div id="review-container"></div>
+    </div>
+</div>
+
+<script>
+    if (sessionStorage.getItem("examInProgress") === "true") {
+        sessionStorage.removeItem("examInProgress"); 
+        alert("Refresh detected. Session terminated.");
+    }
+
+    // MULTILINGUAL DATABASE (20 Questions for demo)
+    // Structure: en:{text, options}, hi:{text, options}, or:{text, options}
+    const rawQuestionBank = [];
+
+    // Generate 20 questions based on your requirements
+    // For brevity in code, we create a function to generate similar questions with translations
+    function createARQuestion(id) {
+        return {
+            type: "AR", ans: "A",
+            en: {
+                text: `<strong>Assertion (A):</strong> Lysosomes are suicide bags (Q${id}).<br><strong>Reason (R):</strong> They contain digestive enzymes.`,
+                options: [ {id:"A", t:"Both true, R is correct explanation"}, {id:"B", t:"Both true, R is not correct"}, {id:"C", t:"A is true, R false"}, {id:"D", t:"A false, R true"} ]
+            },
+            hi: {
+                text: `<strong>कथन (A):</strong> लाइसोसोम आत्महत्या की थैलियां हैं (Q${id})।<br><strong>कारण (R):</strong> उनमें पाचक एंजाइम होते हैं।`,
+                options: [ {id:"A", t:"दोनों सत्य हैं, R सही स्पष्टीकरण है"}, {id:"B", t:"दोनों सत्य हैं, R सही स्पष्टीकरण नहीं है"}, {id:"C", t:"A सत्य, R असत्य"}, {id:"D", t:"A असत्य, R सत्य"} ]
+            },
+            or: {
+                text: `<strong>କଥନ (A):</strong> ଲାଇସୋସୋମକୁ ଆତ୍ମହତ୍ୟା ଥଳି କୁହାଯାଏ (Q${id}) |<br><strong>କାରଣ (R):</strong> ସେଥିରେ ହଜମକାରୀ ଏଞ୍ଜାଇମ୍ ଥାଏ |`,
+                options: [ {id:"A", t:"ଉଭୟ ସତ୍ୟ, R ସଠିକ୍ ବ୍ୟାଖ୍ୟା"}, {id:"B", t:"ଉଭୟ ସତ୍ୟ, R ସଠିକ୍ ବ୍ୟାଖ୍ୟା ନୁହେଁ"}, {id:"C", t:"A ସତ୍ୟ, R ମିଥ୍ୟା"}, {id:"D", t:"A ମିଥ୍ୟା, R ସତ୍ୟ"} ]
+            }
+        };
+    }
+
+    function createMatchQuestion(id) {
+        return {
+            type: "MATCH", ans: "B",
+            en: {
+                text: `Match the following (Q${id}):<br><table class="match-table"><tr><th>Col A</th><th>Col B</th></tr><tr><td>P. Mitochondria</td><td>1. Protein</td></tr><tr><td>Q. Ribosome</td><td>2. Energy</td></tr></table>`,
+                options: [ {id:"A", t:"P-1, Q-2"}, {id:"B", t:"P-2, Q-1"}, {id:"C", t:"P-1, Q-1"}, {id:"D", t:"P-2, Q-2"} ]
+            },
+            hi: {
+                text: `निम्नलिखित का मिलान करें (Q${id}):<br><table class="match-table"><tr><th>कॉलम A</th><th>कॉलम B</th></tr><tr><td>P. माइटोकॉन्ड्रिया</td><td>1. प्रोटीन</td></tr><tr><td>Q. राइबोसोम</td><td>2. ऊर्जा</td></tr></table>`,
+                options: [ {id:"A", t:"P-1, Q-2"}, {id:"B", t:"P-2, Q-1"}, {id:"C", t:"P-1, Q-1"}, {id:"D", t:"P-2, Q-2"} ]
+            },
+            or: {
+                text: `ନିମ୍ନଲିଖିତକୁ ମେଳ କରନ୍ତୁ (Q${id}):<br><table class="match-table"><tr><th>ସ୍ତମ୍ଭ A</th><th>ସ୍ତମ୍ଭ B</th></tr><tr><td>P. ମାଇଟୋକଣ୍ଡ୍ରିଆ</td><td>1. ପ୍ରୋଟିନ୍</td></tr><tr><td>Q. ରାଇବୋସୋମ୍</td><td>2. ଶକ୍ତି</td></tr></table>`,
+                options: [ {id:"A", t:"P-1, Q-2"}, {id:"B", t:"P-2, Q-1"}, {id:"C", t:"P-1, Q-1"}, {id:"D", t:"P-2, Q-2"} ]
+            }
+        };
+    }
+
+    // Populate 20 questions
+    for(let i=1; i<=10; i++) rawQuestionBank.push(createARQuestion(i));
+    for(let i=11; i<=20; i++) rawQuestionBank.push(createMatchQuestion(i));
+
+    let examData = []; 
+    let currentLang = 'en';
+    let totalQuestions = 20; 
+    let timer, timeLeft;
+    let currentIndex = 0;
+    let questionStates = [];
+
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    function goHome() { sessionStorage.removeItem("examInProgress"); switchScreen('home-screen'); }
+
+    function goToInstructions() {
+        document.getElementById('display-class').innerText = document.getElementById('class-select').value + "th";
+        document.getElementById('display-subject').innerText = document.getElementById('subject-select').value;
+        document.getElementById('display-chapter').innerText = document.getElementById('chapter-input').value;
+        document.getElementById('display-diff').innerText = document.getElementById('difficulty-select').value;
+        switchScreen('instruction-screen');
+    }
+
+    function startExam() {
+        sessionStorage.setItem("examInProgress", "true"); 
+        examData = [...rawQuestionBank].sort(() => Math.random() - 0.5);
+        questionStates = Array(totalQuestions).fill().map(() => ({ status: 'unvisited', answer: null }));
+        currentIndex = 0;
+        timeLeft = 25 * 60; // 25 mins
+        
+        document.getElementById('lang-select').value = 'en';
+        currentLang = 'en';
+        
+        switchScreen('exam-screen');
+        buildPalette();
+        loadQuestion(0);
+        startTimer();
+    }
+
+    function reExam() { switchScreen('instruction-screen'); }
+
+    function startTimer() {
+        clearInterval(timer);
+        const timeDisplay = document.getElementById('time-display');
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60); let s = timeLeft % 60;
+            timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (timeLeft <= 0) { clearInterval(timer); alert("Time up!"); processFinalSubmit(); }
+        }, 1000);
+    }
+
+    function buildPalette() {
+        const grid = document.getElementById('palette-grid');
+        grid.innerHTML = '';
+        for(let i=0; i<totalQuestions; i++) {
+            let btn = document.createElement('button');
+            btn.className = 'palette-btn status-unvisited';
+            btn.id = `pal-${i}`; btn.innerText = i + 1;
+            btn.onclick = () => loadQuestion(i);
+            grid.appendChild(btn);
+        }
+    }
+
+    function updatePaletteColors() {
+        for(let i=0; i<totalQuestions; i++) {
+            let btn = document.getElementById(`pal-${i}`);
+            let state = questionStates[i];
+            btn.className = 'palette-btn'; 
+            if (i === currentIndex) btn.classList.add('status-current');
+            else if (state.status === 'review') btn.classList.add('status-review');
+            else if (state.answer !== null) btn.classList.add('status-answered');
+            else if (state.status === 'visited') btn.classList.add('status-visited');
+            else btn.classList.add('status-unvisited');
+        }
+    }
+
+    function changeLanguage() {
+        currentLang = document.getElementById('lang-select').value;
+        loadQuestion(currentIndex); // Reload current question in new language
+    }
+
+    function loadQuestion(index) {
+        currentIndex = index;
+        let q = examData[index];
+        let state = questionStates[index];
+        
+        if (state.status === 'unvisited') state.status = 'visited';
+
+        let langData = q[currentLang]; // Get EN, HI, or OR data
+        let typeLabel = q.type === "AR" ? "Assertion-Reasoning" : "Matching / Cause-Effect";
+
+        const qArea = document.getElementById('question-area');
+        qArea.innerHTML = `
+            <div style="font-size: 14px; color: #666; margin-bottom: 10px; font-weight:bold;">Type: ${typeLabel}</div>
+            <h2>Q${index + 1} / ${totalQuestions}</h2>
+            <div style="margin-bottom: 20px;">${langData.text}</div>
+            <div class="options">
+                ${langData.options.map(opt => `
+                    <label>
+                        <input type="radio" name="q_opt" value="${opt.id}" 
+                            ${state.answer === opt.id ? 'checked' : ''} 
+                            onchange="selectAnswer('${opt.id}')">
+                        <strong>(${opt.id})</strong> ${opt.t}
+                    </label>
+                `).join('')}
+            </div>
+        `;
+
+        document.getElementById('btn-prev').style.visibility = (index === 0) ? 'hidden' : 'visible';
+        
+        // Show Submit Button on Bottom Left ONLY on last question
+        if (index === totalQuestions - 1) {
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-submit-exam').style.display = 'block';
+        } else {
+            document.getElementById('btn-next').style.display = 'inline-block';
+            document.getElementById('btn-submit-exam').style.display = 'none';
+        }
+        updatePaletteColors();
+    }
+
+    function selectAnswer(id) { questionStates[currentIndex].answer = id; questionStates[currentIndex].status = 'answered'; updatePaletteColors(); }
+    function markForReview() { questionStates[currentIndex].status = 'review'; updatePaletteColors(); }
+    function changeQuestion(step) { let newIndex = currentIndex + step; if(newIndex >= 0 && newIndex < totalQuestions) loadQuestion(newIndex); }
+
+    function goToPreview() {
+        switchScreen('preview-screen');
+        const grid = document.getElementById('preview-grid');
+        grid.innerHTML = '';
+        examData.forEach((q, i) => {
+            let state = questionStates[i];
+            let statusText = state.answer ? `Ans: ${state.answer}` : (state.status === 'review' ? 'Review' : 'Skipped');
+            let color = state.answer ? 'var(--success)' : (state.status === 'review' ? 'var(--review)' : 'var(--danger)');
+            grid.innerHTML += `<div class="preview-item"><strong>Q${i+1}</strong><br><span style="color:${color};">${statusText}</span></div>`;
+        });
+    }
+
+    function backToExam() { switchScreen('exam-screen'); loadQuestion(currentIndex); }
+
+    function processFinalSubmit() {
+        clearInterval(timer); sessionStorage.removeItem("examInProgress"); 
+        switchScreen('loader-screen');
+        setTimeout(() => { generateDashboard(); switchScreen('result-screen'); }, 2000);
+    }
+
+    function generateDashboard() {
+        let correct = 0, incorrect = 0, unattempted = 0;
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = '';
+
+        examData.forEach((q, i) => {
+            let uAns = questionStates[i].answer;
+            let statusHTML;
+            if (uAns === null) { unattempted++; statusHTML = `<span style="color:#6c757d;">Not Attempted</span>`; }
+            else if (uAns === q.ans) { correct++; statusHTML = `<span style="color:var(--success);">Correct ✔</span>`; }
+            else { incorrect++; statusHTML = `<span style="color:var(--danger);">Incorrect ✘ (Your Ans: ${uAns})</span>`; }
+
+            let enData = q['en']; // Show review in English baseline
+            let correctOpt = enData.options.find(o => o.id === q.ans);
+
+            reviewContainer.innerHTML += `
+                <div class="result-item">
+                    <div>${enData.text}</div>
+                    <div style="margin-top: 15px; padding-top:10px; border-top: 1px solid #ddd;">
+                        <div><strong>Status:</strong> ${statusHTML}</div>
+                        <div style="color: var(--success);"><strong>Correct Answer: (${q.ans})</strong> ${correctOpt.t}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById('score-details').innerHTML = `
+            <div class="score-box" style="background:#e9ecef;">Total: ${totalQuestions}</div>
+            <div class="score-box" style="background:#d4edda; color:#155724;">Correct: ${correct}</div>
+            <div class="score-box" style="background:#f8d7da; color:#721c24;">Incorrect: ${incorrect}</div>
+            <div class="score-box" style="background:#e2e3e5; color:#383d41;">Unattempted: ${unattempted}</div>
+            <h2 style="color:var(--primary);">Score: ${(correct/totalQuestions*100).toFixed(0)}%</h2>
+        `;
+
+        const ctx = document.getElementById('resultChart').getContext('2d');
+        if(window.myChart) window.myChart.destroy();
+        window.myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['Correct', 'Incorrect', 'Unattempted'], datasets: [{ data: [correct, incorrect, unattempted], backgroundColor: ['#28a745', '#dc3545', '#6c757d'] }] }
+        });
+    }
+</script>
+</body>
+</html>
